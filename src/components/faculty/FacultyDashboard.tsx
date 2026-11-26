@@ -28,24 +28,32 @@ interface FacultyDashboardProps {
 export const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ viewMode = 'overview' }) => {
   const { questions, appointments, currentUser, setActiveTab, updateAppointmentStatus } = useApp();
 
-  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
+  const selectedQuestion = questions.find((q) => q.id === selectedQuestionId) || null;
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [subjectFilter, setSubjectFilter] = useState('All');
+  const [scopeFilter, setScopeFilter] = useState<'all' | 'my'>('all');
 
-  // Filter questions for this faculty (or department) that have been sent to faculty
-  const facultyQuestions = questions.filter(
-    (q) => q.sentToFaculty && (q.facultyId === currentUser?.id || currentUser?.department?.includes('Computer Science'))
-  );
+  // Filter questions that have been sent to faculty
+  const facultyQuestions = questions.filter((q) => {
+    if (q.sentToFaculty === false) return false;
+    if (scopeFilter === 'my') {
+      return q.facultyId === currentUser?.id;
+    }
+    return true; // Shows questions submitted by all students across sections
+  });
 
   const totalQuestions = facultyQuestions.length;
-  const unansweredQuestions = facultyQuestions.filter(
-    (q) => q.status === 'Sent to Faculty' || q.status === 'Submitted' || q.status === 'In Review'
-  ).length;
-  const answeredQuestions = facultyQuestions.filter(
-    (q) => q.status === 'Answered' || q.status === 'Resolved' || q.status === 'Meeting Suggested'
-  ).length;
+  const unansweredQuestions = facultyQuestions.filter((q) => {
+    const hasFacultyReply = (q.replies || []).some((r) => r.authorRole === 'faculty');
+    return !hasFacultyReply && q.status !== 'Resolved';
+  }).length;
+  const answeredQuestions = facultyQuestions.filter((q) => {
+    const hasFacultyReply = (q.replies || []).some((r) => r.authorRole === 'faculty');
+    return hasFacultyReply || q.status === 'Answered' || q.status === 'Resolved';
+  }).length;
 
   // Faculty appointments
   const facultyAppointments = appointments.filter((a) => a.facultyId === currentUser?.id);
@@ -273,9 +281,20 @@ export const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ viewMode = '
 
               <select
                 className="form-select"
+                value={scopeFilter}
+                onChange={(e) => setScopeFilter(e.target.value as 'all' | 'my')}
+                style={{ height: '34px', fontSize: '0.82rem', width: '150px' }}
+                title="Filter questions by student assignment"
+              >
+                <option value="all">All Students' Doubts</option>
+                <option value="my">Assigned to Me</option>
+              </select>
+
+              <select
+                className="form-select"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ height: '34px', fontSize: '0.82rem', width: '160px' }}
+                style={{ height: '34px', fontSize: '0.82rem', width: '150px' }}
               >
                 <option value="All">All Statuses</option>
                 <option value="Sent to Faculty">Sent to Faculty</option>
@@ -297,7 +316,7 @@ export const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ viewMode = '
                 {filteredQuestions.map((q) => (
                   <div
                     key={q.id}
-                    onClick={() => setSelectedQuestion(q)}
+                    onClick={() => setSelectedQuestionId(q.id)}
                     style={{
                       padding: '1.2rem 1.4rem',
                       borderRadius: 'var(--radius-md)',
@@ -365,7 +384,7 @@ export const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ viewMode = '
       <QuestionDetailModal
         question={selectedQuestion}
         isOpen={!!selectedQuestion}
-        onClose={() => setSelectedQuestion(null)}
+        onClose={() => setSelectedQuestionId(null)}
       />
 
       <AppointmentApprovalModal

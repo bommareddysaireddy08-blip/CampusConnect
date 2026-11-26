@@ -38,7 +38,8 @@ export const MyQuestionsView: React.FC<MyQuestionsViewProps> = ({ onOpenAskModal
     toggleBookmark 
   } = useApp();
 
-  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
+  const selectedQuestion = questions.find((q) => q.id === selectedQuestionId) || null;
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [followUpText, setFollowUpText] = useState<string>('');
@@ -75,10 +76,6 @@ export const MyQuestionsView: React.FC<MyQuestionsViewProps> = ({ onOpenAskModal
 
     addFollowUpReply(selectedQuestion.id, followUpText.trim());
     setFollowUpText('');
-
-    // Update locally in modal
-    const updated = questions.find((q) => q.id === selectedQuestion.id);
-    if (updated) setSelectedQuestion(updated);
   };
 
   return (
@@ -160,8 +157,8 @@ export const MyQuestionsView: React.FC<MyQuestionsViewProps> = ({ onOpenAskModal
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {filteredQuestions.map((q) => {
-            const hasReplies = q.replies && q.replies.length > 0;
-            const latestReply = hasReplies ? q.replies[q.replies.length - 1] : null;
+            const facultyReplies = (q.replies || []).filter((r) => r.authorRole === 'faculty');
+            const latestFacultyReply = facultyReplies.length > 0 ? facultyReplies[facultyReplies.length - 1] : null;
             const isBookmarked = currentUser?.bookmarks?.includes(q.id);
 
             return (
@@ -175,7 +172,7 @@ export const MyQuestionsView: React.FC<MyQuestionsViewProps> = ({ onOpenAskModal
                   gap: '0.8rem',
                   cursor: 'pointer'
                 }}
-                onClick={() => setSelectedQuestion(q)}
+                onClick={() => setSelectedQuestionId(q.id)}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
                   <div>
@@ -260,7 +257,7 @@ export const MyQuestionsView: React.FC<MyQuestionsViewProps> = ({ onOpenAskModal
                 )}
 
                 {/* Latest Faculty Reply Preview */}
-                {latestReply && (
+                {latestFacultyReply && (
                   <div style={{
                     background: 'var(--color-card-bg)',
                     border: '1px solid var(--color-border)',
@@ -269,14 +266,14 @@ export const MyQuestionsView: React.FC<MyQuestionsViewProps> = ({ onOpenAskModal
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                       <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--color-deep-teal)' }}>
-                        Faculty Response from {latestReply.authorName}
+                        Faculty Response from {latestFacultyReply.authorName}
                       </div>
                       <span style={{ fontSize: '0.72rem', color: 'var(--color-text-secondary)' }}>
-                        {formatDate(latestReply.createdAt)}
+                        {formatDate(latestFacultyReply.createdAt)}
                       </span>
                     </div>
                     <p style={{ fontSize: '0.84rem', color: 'var(--color-text-main)', lineHeight: 1.45 }}>
-                      {latestReply.content}
+                      {latestFacultyReply.content}
                     </p>
                   </div>
                 )}
@@ -300,7 +297,7 @@ export const MyQuestionsView: React.FC<MyQuestionsViewProps> = ({ onOpenAskModal
       {selectedQuestion && (
         <Modal
           isOpen={!!selectedQuestion}
-          onClose={() => setSelectedQuestion(null)}
+          onClose={() => setSelectedQuestionId(null)}
           title="Academic Doubt Conversation"
           size="lg"
           footer={
@@ -312,7 +309,7 @@ export const MyQuestionsView: React.FC<MyQuestionsViewProps> = ({ onOpenAskModal
                     style={{ color: 'var(--color-success)', borderColor: 'rgba(46, 125, 99, 0.3)' }}
                     onClick={() => {
                       markQuestionResolved(selectedQuestion.id);
-                      setSelectedQuestion(null);
+                      setSelectedQuestionId(null);
                     }}
                   >
                     <CheckCircle2 size={14} /> Mark as Resolved
@@ -323,7 +320,7 @@ export const MyQuestionsView: React.FC<MyQuestionsViewProps> = ({ onOpenAskModal
                     className="btn btn-amber btn-sm"
                     onClick={() => {
                       sendQuestionToFaculty(selectedQuestion.id);
-                      setSelectedQuestion(null);
+                      setSelectedQuestionId(null);
                     }}
                   >
                     Send to Faculty for Clarification
@@ -331,7 +328,7 @@ export const MyQuestionsView: React.FC<MyQuestionsViewProps> = ({ onOpenAskModal
                 )}
               </div>
 
-              <button className="btn btn-secondary btn-sm" onClick={() => setSelectedQuestion(null)}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setSelectedQuestionId(null)}>
                 Close
               </button>
             </div>
@@ -488,7 +485,7 @@ export const MyQuestionsView: React.FC<MyQuestionsViewProps> = ({ onOpenAskModal
                           className="btn btn-amber btn-sm"
                           style={{ fontSize: '0.74rem', padding: '0.2rem 0.6rem' }}
                           onClick={() => {
-                            setSelectedQuestion(null);
+                            setSelectedQuestionId(null);
                             setActiveTab('appointments');
                           }}
                         >

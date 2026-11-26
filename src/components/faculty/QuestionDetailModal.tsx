@@ -27,12 +27,21 @@ export const QuestionDetailModal: React.FC<QuestionDetailModalProps> = ({
   const { replyToQuestion, markRepeatedDoubt, createFaq } = useApp();
 
   const [replyText, setReplyText] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<QuestionStatus>(question?.status || 'Answered');
+  const [selectedStatus, setSelectedStatus] = useState<QuestionStatus>('Answered');
   const [suggestMeeting, setSuggestMeeting] = useState(false);
   const [meetingNote, setMeetingNote] = useState('Please book a 15-minute slot in my Wednesday office hours.');
   const [isExportingFaq, setIsExportingFaq] = useState(false);
   const [faqQuestion, setFaqQuestion] = useState(question?.title || '');
   const [faqAnswer, setFaqAnswer] = useState('');
+
+  // Keep state in sync with opened question
+  React.useEffect(() => {
+    if (question) {
+      setSelectedStatus(question.status === 'Sent to Faculty' || question.status === 'Pending' ? 'Answered' : question.status);
+      setFaqQuestion(question.title);
+      setReplyText('');
+    }
+  }, [question?.id]);
 
   if (!question) return null;
 
@@ -40,10 +49,14 @@ export const QuestionDetailModal: React.FC<QuestionDetailModalProps> = ({
     e.preventDefault();
     if (!replyText.trim()) return;
 
+    const finalStatus: QuestionStatus = (selectedStatus === 'Sent to Faculty' || selectedStatus === 'Pending')
+      ? 'Answered'
+      : selectedStatus;
+
     replyToQuestion(
       question.id,
       replyText.trim(),
-      selectedStatus,
+      finalStatus,
       suggestMeeting,
       suggestMeeting ? meetingNote : undefined
     );
@@ -307,7 +320,7 @@ export const QuestionDetailModal: React.FC<QuestionDetailModalProps> = ({
               className="btn btn-primary"
               disabled={!replyText.trim()}
             >
-              <Send size={15} /> Submit Response to Student
+              <Send size={15} /> Send Reply
             </button>
           </div>
         </form>

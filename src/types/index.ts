@@ -5,6 +5,7 @@ export type QuestionStatus =
   | 'Sent to Faculty' 
   | 'Answered' 
   | 'Resolved'
+  | 'Pending'
   | 'Submitted'           // backwards compatibility
   | 'In Review'           // backwards compatibility
   | 'Meeting Suggested';  // backwards compatibility
